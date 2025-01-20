@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
-
-import "./TokenReward.sol";
+pragma solidity 0.8.26;
 
 contract CrowdfundingCampaign {
-    string public name;
     address public owner;
-    uint256 public goal; // Funding goal
-    uint256 public deadline; // Campaign deadline
-    uint256 public totalFundsRaised;
-
-    TokenReward public rewardToken;
+    string public name;
+    uint goal; //Funding goal in wei
+    uint32 startAt;
+    uint32 endAt; //Deadline of Campaign
+    uint public totalFundsRaised;
     bool public campaignEnded;
 
-    mapping(address => uint256) public contributions;
+    mapping(address => uint) public contributions;
 
-    event ContributionReceived(address indexed contributor, uint256 amount);
-    event CampaignSucceeded(uint256 totalFundsRaised);
-    event CampaignFailed(uint256 totalFundsRaised);
-    event TokensClaimed(address indexed contributor, uint256 amount);
+    event ContributionReceived(address indexed contributor, uint amount);
+    event CampaignSucceeded(uint totalFundsRaised);
+    event CampaignFailed(uint totalFundsRaised);
+    event FundsWithdrawn(address indexed owner, uint amount);
+    event RefundIssued(address indexed contributor, uint amount);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not campaign owner");
@@ -26,37 +24,38 @@ contract CrowdfundingCampaign {
     }
 
     modifier beforeDeadline() {
-        require(block.timestamp < deadline, "Campaign has ended");
+        require(block.timestamp < endAt, "Campaign has ended");
         _;
     }
 
     modifier afterDeadline() {
-        require(block.timestamp >= deadline, "Campaign still active");
+        require(block.timestamp >= endAt, "Campaign still active");
         _;
     }
 
     constructor(
         string memory _name,
-        uint256 _goal,
-        uint256 _deadline,
-        address _rewardToken,
+        uint _goal,
+        uint32 _startAt,
+        uint32 _endAt,
         address _owner
     ) {
+        require(_startAt >= block.timestamp, "Invalid Start Date");
         require(_goal > 0, "Invalid goal");
-        require(_deadline > block.timestamp, "Invalid deadline");
+        require(_endAt > block.timestamp, "invalid deadline");
 
         name = _name;
         goal = _goal;
-        deadline = _deadline;
-        rewardToken = TokenReward(_rewardToken);
+        endAt = _endAt;
         owner = _owner;
     }
 
     /**
      * @notice Contribute ETH to the campaign
      */
+
     function contribute() external payable beforeDeadline {
-        require(msg.value > 0, "Contribution must be > 0");
+        require(msg.value > 0, "contribution must be > 0");
 
         contributions[msg.sender] += msg.value;
         totalFundsRaised += msg.value;
@@ -64,9 +63,6 @@ contract CrowdfundingCampaign {
         emit ContributionReceived(msg.sender, msg.value);
     }
 
-    /**
-     * @notice End the campaign manually after the deadline
-     */
     function finalizeCampaign() external afterDeadline onlyOwner {
         require(!campaignEnded, "Campaign already ended");
 
@@ -74,49 +70,60 @@ contract CrowdfundingCampaign {
 
         if (totalFundsRaised >= goal) {
             emit CampaignSucceeded(totalFundsRaised);
-            rewardToken.transferFrom(owner, address(this), totalFundsRaised);
         } else {
             emit CampaignFailed(totalFundsRaised);
         }
     }
 
-    /**
-     * @notice Claim reward tokens proportional to contribution
-     */
-    function claimTokens() external afterDeadline {
-        require(campaignEnded, "Campaign not ended");
-        uint256 contribution = contributions[msg.sender];
-        require(contribution > 0, "No contributions");
-
-        uint256 rewardAmount = (contribution * rewardToken.balanceOf(address(this))) / totalFundsRaised;
-        contributions[msg.sender] = 0;
-
-        rewardToken.transfer(msg.sender, rewardAmount);
-
-        emit TokensClaimed(msg.sender, rewardAmount);
-    }
-
-    /**
-     * @notice Withdraw ETH raised if the campaign is successful
-     */
-    function withdrawFunds() external onlyOwner afterDeadline {
-        require(campaignEnded, "Campaign not ended");
-        require(totalFundsRaised >= goal, "Goal not met");
-
-        payable(owner).transfer(totalFundsRaised);
-    }
-
-    /**
-     * @notice Refund contributors if the campaign failed
-     */
     function refund() external afterDeadline {
         require(campaignEnded, "Campaign not ended");
-        require(totalFundsRaised < goal, "Campaign succeeded");
+        require(totalFundsRaised < goal, "Campaign Succeeded");
 
-        uint256 contribution = contributions[msg.sender];
-        require(contribution > 0, "No contributions to refund");
+        uint contribution = contributions[msg.sender];
+        require(contribution > 0, "No contribution to refund");
 
         contributions[msg.sender] = 0;
         payable(msg.sender).transfer(contribution);
+
+        emit RefundIssued(msg.sender, contribution);
+    }
+
+    ///////////////////////////////
+    /////// GETTER FUNCTIONS //////
+    ///////////////////////////////
+
+    function getName() external view returns (string memory) {
+        return name;
+    }
+
+    function getGoal() external view returns (uint) {
+        return goal;
+    }
+
+    function getStartAt() external view returns (uint32) {
+        return startAt;
+    }
+
+    function getEndAt() external view returns (uint32) {
+        return endAt;
+    }
+
+    function getTotalFundsRaised() external view returns (uint) {
+        return totalFundsRaised;
+    }
+
+    function hasReachedGoal() external view returns (bool) {
+        return totalFundsRaised >= goal;
+    }
+
+    function getTimeRemaining() external view returns (uint) {
+        if (block.timestamp >= endAt) {
+            return 0;
+        }
+        return endAt - block.timestamp;
+    }
+
+    function getContribution(address contributor) external view returns (uint) {
+        return contributions[contributor];
     }
 }
