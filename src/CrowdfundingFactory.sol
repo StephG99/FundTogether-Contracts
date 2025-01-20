@@ -14,7 +14,7 @@ contract CrowdfundingFactory {
     event CampaignCreated(
         address indexed campaignAddress,
         string name,
-        uint goal,
+        uint256 goal,
         uint32 startAt,
         uint32 endAt,
         address owner
@@ -29,7 +29,7 @@ contract CrowdfundingFactory {
      */
     function createCampaign(
         string memory _name,
-        uint _goal,
+        uint256 _goal,
         uint32 _startAt,
         uint32 _endAt
     ) external {
