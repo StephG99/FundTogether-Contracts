@@ -4,19 +4,19 @@ pragma solidity 0.8.26;
 contract CrowdfundingCampaign {
     address public owner;
     string public name;
-    uint goal; //Funding goal in wei
+    uint256 goal; //Funding goal in wei
     uint32 startAt;
     uint32 endAt; //Deadline of Campaign
-    uint public totalFundsRaised;
+    uint256 public totalFundsRaised;
     bool public campaignEnded;
 
-    mapping(address => uint) public contributions;
+    mapping(address => uint256) public contributions;
 
-    event ContributionReceived(address indexed contributor, uint amount);
-    event CampaignSucceeded(uint totalFundsRaised);
-    event CampaignFailed(uint totalFundsRaised);
-    event FundsWithdrawn(address indexed owner, uint amount);
-    event RefundIssued(address indexed contributor, uint amount);
+    event ContributionReceived(address indexed contributor, uint256 amount);
+    event CampaignSucceeded(uint256 totalFundsRaised);
+    event CampaignFailed(uint256 totalFundsRaised);
+    event FundsWithdrawn(address indexed owner, uint256 amount);
+    event RefundIssued(address indexed contributor, uint256 amount);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not campaign owner");
@@ -33,13 +33,7 @@ contract CrowdfundingCampaign {
         _;
     }
 
-    constructor(
-        string memory _name,
-        uint _goal,
-        uint32 _startAt,
-        uint32 _endAt,
-        address _owner
-    ) {
+    constructor(string memory _name, uint256 _goal, uint32 _startAt, uint32 _endAt, address _owner) {
         require(_startAt >= block.timestamp, "Invalid Start Date");
         require(_goal > 0, "Invalid goal");
         require(_endAt > block.timestamp, "invalid deadline");
@@ -53,7 +47,6 @@ contract CrowdfundingCampaign {
     /**
      * @notice Contribute ETH to the campaign
      */
-
     function contribute() external payable beforeDeadline {
         require(msg.value > 0, "contribution must be > 0");
 
@@ -79,7 +72,7 @@ contract CrowdfundingCampaign {
         require(campaignEnded, "Campaign not ended");
         require(totalFundsRaised < goal, "Campaign Succeeded");
 
-        uint contribution = contributions[msg.sender];
+        uint256 contribution = contributions[msg.sender];
         require(contribution > 0, "No contribution to refund");
 
         contributions[msg.sender] = 0;
@@ -96,7 +89,7 @@ contract CrowdfundingCampaign {
         return name;
     }
 
-    function getGoal() external view returns (uint) {
+    function getGoal() external view returns (uint256) {
         return goal;
     }
 
@@ -108,7 +101,7 @@ contract CrowdfundingCampaign {
         return endAt;
     }
 
-    function getTotalFundsRaised() external view returns (uint) {
+    function getTotalFundsRaised() external view returns (uint256) {
         return totalFundsRaised;
     }
 
@@ -116,14 +109,14 @@ contract CrowdfundingCampaign {
         return totalFundsRaised >= goal;
     }
 
-    function getTimeRemaining() external view returns (uint) {
+    function getTimeRemaining() external view returns (uint256) {
         if (block.timestamp >= endAt) {
             return 0;
         }
         return endAt - block.timestamp;
     }
 
-    function getContribution(address contributor) external view returns (uint) {
+    function getContribution(address contributor) external view returns (uint256) {
         return contributions[contributor];
     }
 }
