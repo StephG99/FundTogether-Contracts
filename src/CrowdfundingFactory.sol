@@ -1,61 +1,71 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity ^0.8.0;
 
-import "./CrowdfundingCampaign.sol";
+import {CrowdfundingCampaign} from "./CrowdfundingCampaign.sol";
 
 contract CrowdfundingFactory {
-    // Array to store deployed campaigns
-    CrowdfundingCampaign[] public campaigns;
+    address public owner;
+    bool public paused;
 
-    // Mapping to validate campaign addresses
-    mapping(address => bool) public isCampaign;
-
-    // Event emitted when a new campaign is created
-    event CampaignCreated(
-        address indexed campaignAddress, string name, uint256 goal, uint32 startAt, uint32 endAt, address owner
-    );
-
-    /**
-     * @notice Create a new crowdfunding campaign
-     * @param _name The name of the campaign
-     * @param _goal The funding goal in wei
-     * @param _startAt The start time of the campaign
-     * @param _endAt The end time (deadline) of the campaign
-     */
-    function createCampaign(string memory _name, uint256 _goal, uint32 _startAt, uint32 _endAt) external {
-        // Validate input
-        require(_startAt >= block.timestamp, "Invalid start time");
-        require(_endAt > _startAt, "Invalid end time");
-
-        // Deploy the campaign
-        CrowdfundingCampaign newCampaign = new CrowdfundingCampaign(_name, _goal, _startAt, _endAt, msg.sender);
-
-        // Add the campaign to the array and mapping
-        campaigns.push(newCampaign);
-        isCampaign[address(newCampaign)] = true;
-
-        // Emit the campaign creation event
-        emit CampaignCreated(address(newCampaign), _name, _goal, _startAt, _endAt, msg.sender);
+    struct Campaign {
+        address campaignAddress;
+        address owner;
+        string name;
+        uint256 creationTime;
     }
 
-    /**
-     * @notice Get the total number of campaigns
-     */
-    function getTotalCampaigns() external view returns (uint256) {
-        return campaigns.length;
+    Campaign[] public campaigns;
+    mapping(address => Campaign[]) public userCampaigns;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner.");
+        _;
     }
 
-    /**
-     * @notice Validate if an address is a campaign
-     * @param campaignAddress The address of the campaign to validate
-     * @return True if the address is a valid campaign, false otherwise
-     */
-    function validateCampaign(address campaignAddress) external view returns (bool) {
-        return isCampaign[campaignAddress];
+    modifier notPaused() {
+        require(!paused, "Factory is paused");
+        _;
     }
 
-    function getCampaignAddress(uint256 index) external view returns (address) {
-        require(index < campaigns.length, "Invalid index");
-        return address(campaigns[index]);
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function createCampaign(
+        string memory _name,
+        uint256 _goal,
+        uint32 _durationInDays
+    ) external notPaused {
+        CrowdfundingCampaign newCampaign = new CrowdfundingCampaign(
+            msg.sender,
+            _name,
+            _goal,
+            _durationInDays
+        );
+        address campaignAddress = address(newCampaign);
+
+        Campaign memory campaign = Campaign({
+            campaignAddress: campaignAddress,
+            owner: msg.sender,
+            name: _name,
+            creationTime: block.timestamp
+        });
+
+        campaigns.push(campaign);
+        userCampaigns[msg.sender].push(campaign);
+    }
+
+    function getUserCampaigns(
+        address _user
+    ) external view returns (Campaign[] memory) {
+        return userCampaigns[_user];
+    }
+
+    function getAllCampaigns() external view returns (Campaign[] memory) {
+        return campaigns;
+    }
+
+    function togglePause() external onlyOwner {
+        paused = !paused;
     }
 }

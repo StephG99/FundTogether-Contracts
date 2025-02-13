@@ -2,121 +2,192 @@
 pragma solidity 0.8.26;
 
 contract CrowdfundingCampaign {
-    address public owner;
     string public name;
-    uint256 goal; //Funding goal in wei
-    uint32 startAt;
-    uint32 endAt; //Deadline of Campaign
-    uint256 public totalFundsRaised;
-    bool public campaignEnded;
+    uint256 public goal; // Funding goal in wei
+    uint256 public deadline;
+    address public owner;
+    bool public paused;
 
-    mapping(address => uint256) public contributions;
+    enum CampaignState {
+        Active,
+        Successful,
+        Failed
+    }
+    CampaignState public state;
 
-    event ContributionReceived(address indexed contributor, uint256 amount);
-    event CampaignSucceeded(uint256 totalFundsRaised);
-    event CampaignFailed(uint256 totalFundsRaised);
-    event FundsWithdrawn(address indexed owner, uint256 amount);
-    event RefundIssued(address indexed contributor, uint256 amount);
+    struct Tier {
+        string name;
+        uint256 amount;
+        uint256 backers;
+    }
 
+    struct Backer {
+        uint256 totalContribution;
+        mapping(uint256 => bool) contributedTiers;
+    }
+
+    Tier[] public tiers;
+    mapping(address => Backer) public backers;
+
+    // -----------------
+    // EVENTS
+    // -----------------
+    event TierAdded(string name, uint256 amount);
+    event TierRemoved(uint256 index);
+    event ContributionReceived(
+        address indexed contributor,
+        uint256 amount,
+        uint256 tierIndex
+    );
+    event RefundIssued(address indexed recipient, uint256 amount);
+    event Withdrawal(address indexed owner, uint256 amount);
+    event CampaignPaused();
+    event CampaignUnpaused();
+    event DeadlineExtended(uint256 newDeadline);
+    event CampaignStateChanged(CampaignState newState);
+
+    // -----------------
+    // MODIFIERS
+    // -----------------
     modifier onlyOwner() {
         require(msg.sender == owner, "Not campaign owner");
         _;
     }
 
-    modifier beforeDeadline() {
-        require(block.timestamp < endAt, "Campaign has ended");
+    modifier campaignActive() {
+        require(state == CampaignState.Active, "Campaign is not Active");
         _;
     }
 
-    modifier afterDeadline() {
-        require(block.timestamp >= endAt, "Campaign still active");
+    modifier notPaused() {
+        require(!paused, "Contract is paused.");
         _;
     }
 
-    constructor(string memory _name, uint256 _goal, uint32 _startAt, uint32 _endAt, address _owner) {
-        require(_startAt >= block.timestamp, "Invalid Start Date");
-        require(_goal > 0, "Invalid goal");
-        require(_endAt > block.timestamp, "invalid deadline");
-
+    constructor(
+        address _owner,
+        string memory _name,
+        uint256 _goal,
+        uint256 _durationInDays //address _owner
+    ) {
         name = _name;
         goal = _goal;
-        endAt = _endAt;
+        deadline = block.timestamp + (_durationInDays * 1 days);
         owner = _owner;
+        state = CampaignState.Active;
     }
 
-    /**
-     * @notice Contribute ETH to the campaign
-     */
-    function contribute() external payable beforeDeadline {
-        require(msg.value > 0, "contribution must be > 0");
+    function checkAndUpdateCampaignState() internal {
+        CampaignState oldState = state;
+        if (state == CampaignState.Active) {
+            if (block.timestamp >= deadline) {
+                state = address(this).balance >= goal
+                    ? CampaignState.Successful
+                    : CampaignState.Failed;
+            } else {
+                state = address(this).balance >= goal
+                    ? CampaignState.Successful
+                    : CampaignState.Active;
+            }
+        }
 
-        contributions[msg.sender] += msg.value;
-        totalFundsRaised += msg.value;
-
-        emit ContributionReceived(msg.sender, msg.value);
-    }
-
-    function finalizeCampaign() external afterDeadline onlyOwner {
-        require(!campaignEnded, "Campaign already ended");
-
-        campaignEnded = true;
-
-        if (totalFundsRaised >= goal) {
-            emit CampaignSucceeded(totalFundsRaised);
-        } else {
-            emit CampaignFailed(totalFundsRaised);
+        // If the state has changed, emit an event
+        if (oldState != state) {
+            emit CampaignStateChanged(state);
         }
     }
 
-    function refund() external afterDeadline {
-        require(campaignEnded, "Campaign not ended");
-        require(totalFundsRaised < goal, "Campaign Succeeded");
+    function contribute(
+        uint256 _tierIndex
+    ) public payable campaignActive notPaused {
+        require(_tierIndex < tiers.length, "Invalid Tier");
+        //Allow for contributions > tier
+        require(msg.value >= tiers[_tierIndex].amount, "Incorrect Amount");
 
-        uint256 contribution = contributions[msg.sender];
-        require(contribution > 0, "No contribution to refund");
+        tiers[_tierIndex].backers++;
+        backers[msg.sender].totalContribution += msg.value;
+        backers[msg.sender].contributedTiers[_tierIndex] = true;
 
-        contributions[msg.sender] = 0;
-        payable(msg.sender).transfer(contribution);
+        emit ContributionReceived(msg.sender, msg.value, _tierIndex);
 
-        emit RefundIssued(msg.sender, contribution);
+        checkAndUpdateCampaignState();
     }
 
-    ///////////////////////////////
-    /////// GETTER FUNCTIONS //////
-    ///////////////////////////////
+    function addTier(string memory _name, uint256 _amount) public onlyOwner {
+        require(_amount > 0, "Amount must be > 0");
+        tiers.push(Tier(_name, _amount, 0));
 
-    function getName() external view returns (string memory) {
-        return name;
+        emit TierAdded(_name, _amount);
     }
 
-    function getGoal() external view returns (uint256) {
-        return goal;
+    function removeTier(uint256 _index) public onlyOwner {
+        require(_index < tiers.length, "Tier does not exist");
+        require(
+            tiers[_index].backers == 0,
+            "Tier already has backers, cannot remove"
+        );
+
+        tiers[_index] = tiers[tiers.length - 1];
+        tiers.pop();
+
+        emit TierRemoved(_index);
     }
 
-    function getStartAt() external view returns (uint32) {
-        return startAt;
+    function withdraw() public onlyOwner {
+        checkAndUpdateCampaignState();
+        require(
+            state == CampaignState.Successful,
+            "Campaign State not Successful"
+        );
+
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No balance to withdraw");
+
+        payable(owner).transfer(balance);
     }
 
-    function getEndAt() external view returns (uint32) {
-        return endAt;
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 
-    function getTotalFundsRaised() external view returns (uint256) {
-        return totalFundsRaised;
+    function refund() public {
+        checkAndUpdateCampaignState();
+        require(state == CampaignState.Failed, "Refund not available");
+        uint256 amount = backers[msg.sender].totalContribution;
+        require(amount > 0, "No contribution to refund");
+
+        backers[msg.sender].totalContribution = 0;
+        payable(msg.sender).transfer(amount);
     }
 
-    function hasReachedGoal() external view returns (bool) {
-        return totalFundsRaised >= goal;
+    function hasContributedTier(
+        address _backer,
+        uint256 _tierIndex
+    ) public view returns (bool) {
+        return backers[_backer].contributedTiers[_tierIndex];
     }
 
-    function getTimeRemaining() external view returns (uint256) {
-        if (block.timestamp >= endAt) {
-            return 0;
+    function getTiers() public view returns (Tier[] memory) {
+        return tiers;
+    }
+
+    function togglePause() public onlyOwner {
+        paused = !paused;
+    }
+
+    function getCampaignStatus() public view returns (CampaignState) {
+        if (state == CampaignState.Active && block.timestamp > deadline) {
+            return
+                address(this).balance >= goal
+                    ? CampaignState.Successful
+                    : CampaignState.Failed;
         }
-        return endAt - block.timestamp;
+        return state;
     }
 
-    function getContribution(address contributor) external view returns (uint256) {
-        return contributions[contributor];
+    function extendDeadline(
+        uint256 _daysToAdd
+    ) public onlyOwner campaignActive {
+        deadline += _daysToAdd * 1 days;
     }
 }
