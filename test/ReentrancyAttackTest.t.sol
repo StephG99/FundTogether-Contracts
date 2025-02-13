@@ -17,12 +17,7 @@ contract ReentrancyAttackTest is Test {
         vm.deal(user1, initialBalance);
 
         vm.prank(user1);
-        campaign = new CrowdfundingCampaign(
-            user1,
-            "Reentrancy Test",
-            5 ether,
-            30
-        );
+        campaign = new CrowdfundingCampaign(user1, "Reentrancy Test", 5 ether, 30);
 
         vm.prank(user1);
         campaign.addTier("Exploit Tier", 1 ether);

@@ -31,33 +31,18 @@ contract CrowdfundingFactory {
         owner = msg.sender;
     }
 
-    function createCampaign(
-        string memory _name,
-        uint256 _goal,
-        uint32 _durationInDays
-    ) external notPaused {
-        CrowdfundingCampaign newCampaign = new CrowdfundingCampaign(
-            msg.sender,
-            _name,
-            _goal,
-            _durationInDays
-        );
+    function createCampaign(string memory _name, uint256 _goal, uint32 _durationInDays) external notPaused {
+        CrowdfundingCampaign newCampaign = new CrowdfundingCampaign(msg.sender, _name, _goal, _durationInDays);
         address campaignAddress = address(newCampaign);
 
-        Campaign memory campaign = Campaign({
-            campaignAddress: campaignAddress,
-            owner: msg.sender,
-            name: _name,
-            creationTime: block.timestamp
-        });
+        Campaign memory campaign =
+            Campaign({campaignAddress: campaignAddress, owner: msg.sender, name: _name, creationTime: block.timestamp});
 
         campaigns.push(campaign);
         userCampaigns[msg.sender].push(campaign);
     }
 
-    function getUserCampaigns(
-        address _user
-    ) external view returns (Campaign[] memory) {
+    function getUserCampaigns(address _user) external view returns (Campaign[] memory) {
         return userCampaigns[_user];
     }
 

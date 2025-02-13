@@ -13,6 +13,7 @@ contract CrowdfundingCampaign {
         Successful,
         Failed
     }
+
     CampaignState public state;
 
     struct Tier {
@@ -34,11 +35,7 @@ contract CrowdfundingCampaign {
     // -----------------
     event TierAdded(string name, uint256 amount);
     event TierRemoved(uint256 index);
-    event ContributionReceived(
-        address indexed contributor,
-        uint256 amount,
-        uint256 tierIndex
-    );
+    event ContributionReceived(address indexed contributor, uint256 amount, uint256 tierIndex);
     event RefundIssued(address indexed recipient, uint256 amount);
     event Withdrawal(address indexed owner, uint256 amount);
     event CampaignPaused();
@@ -81,13 +78,9 @@ contract CrowdfundingCampaign {
         CampaignState oldState = state;
         if (state == CampaignState.Active) {
             if (block.timestamp >= deadline) {
-                state = address(this).balance >= goal
-                    ? CampaignState.Successful
-                    : CampaignState.Failed;
+                state = address(this).balance >= goal ? CampaignState.Successful : CampaignState.Failed;
             } else {
-                state = address(this).balance >= goal
-                    ? CampaignState.Successful
-                    : CampaignState.Active;
+                state = address(this).balance >= goal ? CampaignState.Successful : CampaignState.Active;
             }
         }
 
@@ -97,9 +90,7 @@ contract CrowdfundingCampaign {
         }
     }
 
-    function contribute(
-        uint256 _tierIndex
-    ) public payable campaignActive notPaused {
+    function contribute(uint256 _tierIndex) public payable campaignActive notPaused {
         require(_tierIndex < tiers.length, "Invalid Tier");
         //Allow for contributions > tier
         require(msg.value >= tiers[_tierIndex].amount, "Incorrect Amount");
@@ -122,10 +113,7 @@ contract CrowdfundingCampaign {
 
     function removeTier(uint256 _index) public onlyOwner {
         require(_index < tiers.length, "Tier does not exist");
-        require(
-            tiers[_index].backers == 0,
-            "Tier already has backers, cannot remove"
-        );
+        require(tiers[_index].backers == 0, "Tier already has backers, cannot remove");
 
         tiers[_index] = tiers[tiers.length - 1];
         tiers.pop();
@@ -135,10 +123,7 @@ contract CrowdfundingCampaign {
 
     function withdraw() public onlyOwner {
         checkAndUpdateCampaignState();
-        require(
-            state == CampaignState.Successful,
-            "Campaign State not Successful"
-        );
+        require(state == CampaignState.Successful, "Campaign State not Successful");
 
         uint256 balance = address(this).balance;
         require(balance > 0, "No balance to withdraw");
@@ -160,10 +145,7 @@ contract CrowdfundingCampaign {
         payable(msg.sender).transfer(amount);
     }
 
-    function hasContributedTier(
-        address _backer,
-        uint256 _tierIndex
-    ) public view returns (bool) {
+    function hasContributedTier(address _backer, uint256 _tierIndex) public view returns (bool) {
         return backers[_backer].contributedTiers[_tierIndex];
     }
 
@@ -177,17 +159,12 @@ contract CrowdfundingCampaign {
 
     function getCampaignStatus() public view returns (CampaignState) {
         if (state == CampaignState.Active && block.timestamp > deadline) {
-            return
-                address(this).balance >= goal
-                    ? CampaignState.Successful
-                    : CampaignState.Failed;
+            return address(this).balance >= goal ? CampaignState.Successful : CampaignState.Failed;
         }
         return state;
     }
 
-    function extendDeadline(
-        uint256 _daysToAdd
-    ) public onlyOwner campaignActive {
+    function extendDeadline(uint256 _daysToAdd) public onlyOwner campaignActive {
         deadline += _daysToAdd * 1 days;
     }
 }

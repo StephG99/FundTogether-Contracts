@@ -26,14 +26,12 @@ contract CrowdfundingTest is Test {
         factory.createCampaign("Test Campaign", 5 ether, 30);
 
         // Retrieve the campaign address
-        CrowdfundingFactory.Campaign[] memory campaigns = factory
-            .getUserCampaigns(user1);
+        CrowdfundingFactory.Campaign[] memory campaigns = factory.getUserCampaigns(user1);
         campaign = CrowdfundingCampaign(payable(campaigns[0].campaignAddress));
     }
 
     function test_CampaignCreation() public {
-        CrowdfundingFactory.Campaign[] memory campaigns = factory
-            .getAllCampaigns();
+        CrowdfundingFactory.Campaign[] memory campaigns = factory.getAllCampaigns();
         assertEq(campaigns.length, 1);
         assertEq(campaigns[0].name, "Test Campaign");
     }
