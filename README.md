@@ -2,7 +2,7 @@
 
 ## Deployments
 
-CrowdfundingFactory Contract - [0xbfeb6cbFff39d21A3eD510f5bBAfe3560431766D](https://etherscan.io/address/0xbfeb6cbFff39d21A3eD510f5bBAfe3560431766D)
+CrowdfundingFactory Contract - [0xe8faa3ce9ba1b8433f5f54f500f5d0d015bb82a0](https://sepolia.etherscan.io/tx/0xf14fefd743679644d5491995d05c45c5f56ec70f8ca9806901fa2fb681efd4e0)
 
 ## Contracts
 CrowdfundingFactory.sol: Factory Contract for creating and managing crowdfunding campaigns
