@@ -2,8 +2,8 @@
 
 ## Deployments
 
-- **Contract Address:** [0x13901a037e070be7ff6d0454ef38c131ac1f4215](https://sepolia.etherscan.io/address/0x13901a037e070be7ff6d0454ef38c131ac1f4215)
-- **Deployment Transaction:** [0x348ae7d2845046a462e70632b453fc7cd412b5d197b931e251d1090d167b78ea](https://sepolia.etherscan.io/tx/0x348ae7d2845046a462e70632b453fc7cd412b5d197b931e251d1090d167b78ea)
+- **Contract Address:** [0xD27691901E6366dBD69272754390F170687818F4](https://sepolia.etherscan.io/address/0xD27691901E6366dBD69272754390F170687818F4)
+- **Deployment Transaction:** [0x836b551b3613ff86bf9f121072349c69daeb6414a9b237205fe21cf1d686c397](https://sepolia.etherscan.io/tx/0x836b551b3613ff86bf9f121072349c69daeb6414a9b237205fe21cf1d686c397)
 
 
 ## Contracts
