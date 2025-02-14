@@ -17,6 +17,9 @@ contract CrowdfundingFactory {
     Campaign[] public campaigns;
     mapping(address => Campaign[]) public userCampaigns;
 
+    //Emit this event when a campaign is created
+    event CampaignCreated(address indexed campaignAddress, address indexed owner, string name, uint256 creationTime);
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner.");
         _;
@@ -40,6 +43,9 @@ contract CrowdfundingFactory {
 
         campaigns.push(campaign);
         userCampaigns[msg.sender].push(campaign);
+
+        // Emit the new event so the front end can parse the campaign address
+        emit CampaignCreated(campaignAddress, msg.sender, _name, block.timestamp);
     }
 
     function getUserCampaigns(address _user) external view returns (Campaign[] memory) {
