@@ -61,15 +61,16 @@ contract CrowdfundingCampaign {
         _;
     }
 
-    constructor(
-        address _owner,
-        string memory _name,
-        uint256 _goal,
-        uint256 _durationInDays //address _owner
-    ) {
+    /**
+     * @param _owner The address that owns and controls this campaign.
+     * @param _name The campaign name (e.g. "My Great Project").
+     * @param _goal The funding goal in wei.
+     * @param _deadlineTimestamp The unix timestamp (in seconds) at which the campaign ends.
+     */
+    constructor(address _owner, string memory _name, uint256 _goal, uint256 _deadlineTimestamp) {
         name = _name;
         goal = _goal;
-        deadline = block.timestamp + (_durationInDays * 1 days);
+        deadline = _deadlineTimestamp;
         owner = _owner;
         state = CampaignState.Active;
     }
@@ -92,7 +93,6 @@ contract CrowdfundingCampaign {
 
     function contribute(uint256 _tierIndex) public payable campaignActive notPaused {
         require(_tierIndex < tiers.length, "Invalid Tier");
-        //Allow for contributions > tier
         require(msg.value >= tiers[_tierIndex].amount, "Incorrect Amount");
 
         tiers[_tierIndex].backers++;
@@ -129,6 +129,8 @@ contract CrowdfundingCampaign {
         require(balance > 0, "No balance to withdraw");
 
         payable(owner).transfer(balance);
+
+        emit Withdrawal(owner, balance);
     }
 
     function getContractBalance() public view returns (uint256) {
@@ -143,10 +145,22 @@ contract CrowdfundingCampaign {
 
         backers[msg.sender].totalContribution = 0;
         payable(msg.sender).transfer(amount);
+
+        emit RefundIssued(msg.sender, amount);
     }
 
+    /**
+     * @dev Returns whether a user contributed to a specific tier index.
+     */
     function hasContributedTier(address _backer, uint256 _tierIndex) public view returns (bool) {
         return backers[_backer].contributedTiers[_tierIndex];
+    }
+
+    /**
+     * @dev Returns the total amount (in wei) a given backer has contributed to this campaign.
+     */
+    function getContributionOf(address _backer) public view returns (uint256) {
+        return backers[_backer].totalContribution;
     }
 
     function getTiers() public view returns (Tier[] memory) {
@@ -155,6 +169,11 @@ contract CrowdfundingCampaign {
 
     function togglePause() public onlyOwner {
         paused = !paused;
+        if (paused) {
+            emit CampaignPaused();
+        } else {
+            emit CampaignUnpaused();
+        }
     }
 
     function getCampaignStatus() public view returns (CampaignState) {
@@ -164,7 +183,11 @@ contract CrowdfundingCampaign {
         return state;
     }
 
-    function extendDeadline(uint256 _daysToAdd) public onlyOwner campaignActive {
-        deadline += _daysToAdd * 1 days;
+    function extendDeadline(uint256 _newDeadlineTimestamp) public onlyOwner campaignActive {
+        require(_newDeadlineTimestamp > deadline, "New deadline must be after the current one");
+
+        deadline = _newDeadlineTimestamp;
+
+        emit DeadlineExtended(deadline);
     }
 }

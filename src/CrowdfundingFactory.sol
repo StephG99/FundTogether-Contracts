@@ -14,11 +14,10 @@ contract CrowdfundingFactory {
         uint256 creationTime;
     }
 
+    event CampaignCreated(address indexed campaignAddress, address indexed owner, string name);
+
     Campaign[] public campaigns;
     mapping(address => Campaign[]) public userCampaigns;
-
-    //Emit this event when a campaign is created
-    event CampaignCreated(address indexed campaignAddress, address indexed owner, string name, uint256 creationTime);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner.");
@@ -34,8 +33,15 @@ contract CrowdfundingFactory {
         owner = msg.sender;
     }
 
-    function createCampaign(string memory _name, uint256 _goal, uint32 _durationInDays) external notPaused {
-        CrowdfundingCampaign newCampaign = new CrowdfundingCampaign(msg.sender, _name, _goal, _durationInDays);
+    /**
+     * @param _name The name of the campaign.
+     * @param _goal The funding goal in wei.
+     * @param _deadlineTimestamp The absolute timestamp for when the campaign ends.
+     */
+    function createCampaign(string memory _name, uint256 _goal, uint256 _deadlineTimestamp) external notPaused {
+        // Pass the timestamp directly to the campaign constructor
+        CrowdfundingCampaign newCampaign = new CrowdfundingCampaign(msg.sender, _name, _goal, _deadlineTimestamp);
+
         address campaignAddress = address(newCampaign);
 
         Campaign memory campaign =
@@ -43,9 +49,7 @@ contract CrowdfundingFactory {
 
         campaigns.push(campaign);
         userCampaigns[msg.sender].push(campaign);
-
-        // Emit the new event so the front end can parse the campaign address
-        emit CampaignCreated(campaignAddress, msg.sender, _name, block.timestamp);
+        emit CampaignCreated(campaignAddress, msg.sender, _name);
     }
 
     function getUserCampaigns(address _user) external view returns (Campaign[] memory) {
