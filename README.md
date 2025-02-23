@@ -2,8 +2,8 @@
 
 ## Deployments
 
-- **Contract Address:** [0xD27691901E6366dBD69272754390F170687818F4](https://sepolia.etherscan.io/address/0xD27691901E6366dBD69272754390F170687818F4)
-- **Deployment Transaction:** [0x836b551b3613ff86bf9f121072349c69daeb6414a9b237205fe21cf1d686c397](https://sepolia.etherscan.io/tx/0x836b551b3613ff86bf9f121072349c69daeb6414a9b237205fe21cf1d686c397)
+- **Contract Address:** [0xA6886D15b04a4025839c39Edd4c8bEe7A6F3E4AD](https://sepolia.etherscan.io/address/0xA6886D15b04a4025839c39Edd4c8bEe7A6F3E4AD)
+- **Deployment Transaction:** [0xd1fae2b1bba2037d69bcae2947353ac92fcb5ff0dc10a8fe4876cf9ced89f615](https://sepolia.etherscan.io/tx/0xd1fae2b1bba2037d69bcae2947353ac92fcb5ff0dc10a8fe4876cf9ced89f615)
 
 
 ## Contracts
@@ -12,5 +12,5 @@ CrowdfundingCampaigns.sol: Crowdfunding Campaign contract for individual crowdfu
 
 ## Deploying CrowdfundingFactory.sol
 ```bash
-forge script script/deployCrowdfundingFactory.s.sol:DeployCrowdfundingFactory --rpc-url $SEPOLIA_RPC_URL --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY
+forge script script/deployCrowdfundingFactory.s.sol:DeployCrowdfundingFactory --rpc-url $SEPOLIA_RPC_URL --broadcast --verify -vvvv
 ```
